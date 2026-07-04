@@ -209,10 +209,6 @@ with lib;
         fsType = "vfat";
       };
 
-      "/mnt/internal" = {
-        device = "internal";
-        fsType = "virtiofs";
-      };
       "/mnt/shared" = {
         device = "android";
         fsType = "virtiofs";

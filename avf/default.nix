@@ -114,12 +114,6 @@ with lib;
       };
     */
 
-    systemd.package = pkgs.systemd.overrideAttrs (a: {
-      patches = a.patches ++ [
-        ./systemd-esp-type-ignore.patch
-      ];
-    });
-
     systemd.services.ttyd = {
       serviceConfig = {
         ExecStart = "${extraPkgs.ttyd}/bin/ttyd -i ${ttydSocket} -t disableLeaveAlert=true -W ${config.services.ttyd.entrypoint} -f ${cfg.defaultUser}";

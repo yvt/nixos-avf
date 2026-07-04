@@ -14,30 +14,6 @@ let
   };
   extraPkgs = pkgs.callPackage ./pkgs.nix { inherit base; };
 
-  mkService = name: {
-    serviceConfig = {
-      ExecStart = "${
-        lib.getExe extraPkgs.android_virt.${name}
-      } --grpc-port-file /mnt/internal/debian_service_port";
-      Type = "simple";
-      Restart = "on-failure";
-      RestartSec = 1;
-      User = "root";
-      Group = "root";
-      StandardOutput = "journal";
-      StandardError = "journal";
-    };
-    wantedBy = [ "multi-user.target" ];
-    wants = [ "network-online.target" ];
-    after = [
-      "network-online.target"
-      "network.target"
-      "mnt-internal.mount"
-    ];
-
-    restartIfChanged = false;
-  };
-
   vmConfig = pkgs.formats.json { };
 
   cfg = config.avf;
@@ -249,23 +225,7 @@ with lib;
       */
     };
 
-    # from Virtualization/guest/storage_balloon_agent/debian/service
-
-    systemd.services.storage_balloon_agent = mkService "storage_balloon_agent";
-
-    # from Virtualization/guest/forwarder_guest_launcher/debian/service
-
-    systemd.services.forwarder_guest_launcher = mkService "forwarder_guest_launcher" // {
-      path = [
-        extraPkgs.android_virt.forwarder_guest
-        pkgs.bcc
-        "/run/current-system/sw"
-      ];
-    };
-
-    # from Virtualization/guest/shutdown_runner/debian/service
-
-    systemd.services.shutdown_runner = mkService "shutdown_runner";
+    # TODO: Port Virtualization/build/debian/cloud-init_config/root_files/etc/systemd/system/linux_vm_manager.service
 
     services.zram-generator = {
       enable = true;

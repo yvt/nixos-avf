@@ -138,36 +138,6 @@ with lib;
       restartIfChanged = false;
     };
 
-    systemd.services.avahi_ttyd = {
-      description = "avahi_TTYD";
-
-      after = [
-        "ttyd.service"
-        "avahi-daemon.socket"
-      ];
-      wantedBy = [ "multi-user.target" ];
-
-      serviceConfig = {
-        ExecStart = "${pkgs.avahi}/bin/avahi-publish-service ttyd _http._tcp 7681";
-        Type = "simple";
-        Restart = "always";
-        User = "root";
-        Group = "root";
-      };
-    };
-
-    services.avahi = {
-      enable = true;
-      # Sometimes during startup, Terminal will discover only the IPv6 address
-      # and then only whitelist that one for GRPC.
-      # Remove once this is solved. See #5
-      ipv6 = false;
-      publish = {
-        enable = true;
-        userServices = true;
-      };
-    };
-
     system.build.avfImage = pkgs.callPackage ./finish.nix {
       raw_disk_image = import "${pkgs.path}/nixos/lib/make-disk-image.nix" {
         inherit pkgs lib config;

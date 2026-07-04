@@ -14,8 +14,6 @@ let
   };
   extraPkgs = pkgs.callPackage ./pkgs.nix { inherit base; };
 
-  serialDevice = "ttyS0";
-
   mkService = name: {
     serviceConfig = {
       ExecStart = "${
@@ -220,67 +218,9 @@ with lib;
     ];
 
     boot.growPartition = true;
-    boot.loader.systemd-boot.enable = true;
-    boot.initrd.systemd.enable = true;
-    boot.loader.systemd-boot.extraInstallCommands = mkIf (cfg.enableConfigReplace) ''
-      # update vm_config if on live machine
-      if [ -e /mnt/internal/linux ]; then
-        ${pkgs.coreutils}/bin/cp -v ${config.system.build.vmConfig} /tmp/vm_config.json.new
-        ${pkgs.gnused}/bin/sed -i "s/{efi_part_guid}/$(${pkgs.util-linux}/bin/sfdisk --part-uuid /dev/vda 1)/g" /tmp/vm_config.json.new
-        ${pkgs.gnused}/bin/sed -i "s/{root_part_guid}/$(${pkgs.util-linux}/bin/sfdisk --part-uuid /dev/vda 2)/g" /tmp/vm_config.json.new
-        ${pkgs.coreutils}/bin/mv -v /tmp/vm_config.json.new /mnt/internal/linux/vm_config.json
-      fi
-    '';
-
-    # image building needs to know what device to install bootloader on
-    boot.loader.grub.device = "/dev/vda";
-    # Faster boot. User can't access bootloader currently anyways (?)
-    boot.loader.timeout = 0;
-
-    # avf patches only available for 6.1 right now
-    boot.kernelPackages = mkIf (!cfg.useGenericKernel) pkgs.linuxPackages_6_1;
-
-    boot.kernelPatches = mkIf (!cfg.useGenericKernel) [
-      {
-        name = "avf-ballon";
-        patch = "${base}/build/debian/kernel/patches/avf/arm64-balloon.patch";
-        ${
-          if lib.versionAtLeast lib.trivial.release "25.05" then
-            "structuredExtraConfig"
-          else
-            "extraStructuredConfig"
-        } =
-          with lib.kernel; {
-            SND_VIRTIO = module;
-            SND = yes;
-            SOUND = yes;
-          };
-      }
-      {
-        name = "avf-cpufreq";
-        patch = "${base}/build/debian/kernel/patches/avf/virtual-cpufreq.patch";
-        ${
-          if lib.versionAtLeast lib.trivial.release "25.05" then
-            "structuredExtraConfig"
-          else
-            "extraStructuredConfig"
-        } =
-          with lib.kernel; {
-            CPU_FREQ = yes;
-            IKCONFIG = yes;
-            IKCONFIG_PROC = yes;
-          } // (if pkgs.stdenv.targetPlatform.isAarch64 then {
-            ANDROID_V_CPUFREQ_VIRT = yes;
-          } else {});
-      }
-    ];
-
-    boot.kernelParams = [
-      "console=tty1"
-      "console=${serialDevice}"
-    ];
-
-    boot.kernelModules = [ "vhost_vsock" ] ++ lib.optionals cfg.enableGraphics [ "virtio_gpu" ];
+    boot.loader.initScript.enable = true;
+    boot.loader.grub.enable = false;
+    boot.initrd.enable = false;
 
     fileSystems = {
       "/" = {

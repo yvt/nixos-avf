@@ -197,10 +197,6 @@ with lib;
         autoResize = true;
         fsType = "ext4";
       };
-      "/boot" = {
-        device = "/dev/disk/by-label/ESP";
-        fsType = "vfat";
-      };
 
       "/mnt/shared" = {
         device = "android";

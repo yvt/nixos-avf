@@ -304,5 +304,9 @@ with lib;
     networking.firewall.enable = true; # default
     networking.nftables.enable = true;
     networking.firewall.allowedTCPPorts = [ 7681 ];
+
+    # The `rpfilter` chain requires the `nft_fib_inet` kernel module, but we
+    # do not currently install any kernel modules.
+    networking.firewall.checkReversePath = false;
   };
 }

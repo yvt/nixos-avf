@@ -16,6 +16,8 @@ let
 
   vmConfig = pkgs.formats.json { };
 
+  ttydSocket = "/run/ttyd/ttyd.sock";
+
   cfg = config.avf;
 in
 
@@ -120,11 +122,15 @@ with lib;
 
     systemd.services.ttyd = {
       serviceConfig = {
-        ExecStart = "${extraPkgs.ttyd}/bin/ttyd --ssl --ssl-cert /etc/ttyd/server.crt --ssl-key /etc/ttyd/server.key --ssl-ca /mnt/internal/ca.crt -t disableLeaveAlert=true -W ${config.services.ttyd.entrypoint} -f ${cfg.defaultUser}";
+        ExecStart = "${extraPkgs.ttyd}/bin/ttyd -i ${ttydSocket} -t disableLeaveAlert=true -W ${config.services.ttyd.entrypoint} -f ${cfg.defaultUser}";
         Type = "simple";
         Restart = "always";
         User = "root";
         Group = "root";
+        RuntimeDirectory =
+          assert lib.hasPrefix "/run/ttyd/" ttydSocket;
+          "ttyd";
+        RuntimeDirectoryMode = "0755";
       };
 
       wantedBy = [ "multi-user.target" ];
@@ -132,10 +138,33 @@ with lib;
       after = [
         "network-online.target"
         "network.target"
-        "mnt-internal.mount"
       ];
 
       restartIfChanged = false;
+    };
+
+    systemd.services.ttyd_vsock_bridge = {
+      description = "VSOCK to UDS Bridge for ttyd";
+
+      requires = [ "ttyd.service" ];
+      after = [ "ttyd.service" ];
+
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${pkgs.socat}/bin/socat VSOCK-LISTEN:7681,fork,reuseaddr UNIX-CONNECT:${ttydSocket}";
+        Restart = "always";
+        RestartSec = 3;
+      };
+    };
+
+    systemd.paths.ttyd_vsock_bridge = {
+      description = "Watch for ttyd socket";
+
+      wantedBy = [ "multi-user.target" ];
+
+      pathConfig = {
+        PathExists = ttydSocket;
+      };
     };
 
     system.build.avfImage = pkgs.callPackage ./finish.nix {
